@@ -25,15 +25,14 @@
           src = ./.;
           projectFile = "NuSkill/NuSkill.fsproj";
           
-          # Initial dummy hash for NuGet dependencies
-          # To update: nix build .#default.passthru.fetch-deps && ./result
           nugetDeps = ./nix/deps.json;
 
           dotnet-sdk = dotnet-sdk;
           dotnet-runtime = pkgs.dotnetCorePackages.runtime_10_0;
 
-          # Target musl for a standalone, dependency-free binary
-          runtimeId = "linux-musl-x64";
+          # Use host RID for build if we want it to run on the host
+          # Or linux-x64 for standard glibc distribution
+          runtimeId = "linux-x64";
           selfContained = true;
 
           # Build flags for single file, no trimming, and invariant globalization
@@ -41,12 +40,14 @@
             "-p:PublishSingleFile=true"
             "-p:PublishTrimmed=false"
             "-p:InvariantGlobalization=true"
-            "-p:IncludeNativeLibrariesForSelfExtract=true"
           ];
 
           # Post-install logic to ensure the binary is named correctly and executable
           postInstall = ''
-            mv $out/bin/NuSkill $out/bin/${pname}
+            mkdir -p $out/bin
+            if [ -f $out/lib/${pname}/NuSkill ]; then
+              ln -s $out/lib/${pname}/NuSkill $out/bin/${pname}
+            fi
           '';
 
           meta = with pkgs.lib; {
