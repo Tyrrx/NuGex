@@ -20,32 +20,42 @@ module PackageProcessor =
     let private cache = new SourceCacheContext()
     let private repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json")
 
-    let rec private visitType (typeSymbol: INamedTypeSymbol) =
+    let rec private visitType (typeSymbol: INamedTypeSymbol) (types: Dictionary<string, ApiType>) =
         if typeSymbol.DeclaredAccessibility = Accessibility.Public then
             let typeDoc = typeSymbol.GetDocumentationCommentXml()
-            if not (String.IsNullOrWhiteSpace(typeDoc)) then
-                Console.WriteLine($"Type: {typeSymbol.ToDisplayString()}")
-                Console.WriteLine($"Doc: {typeDoc.Trim()}")
+            let fullName = typeSymbol.ToDisplayString()
+            
+            let members = Dictionary<string, ApiMember>()
             
             // Visit members
             for memberSymbol in typeSymbol.GetMembers() do
                 if memberSymbol.DeclaredAccessibility = Accessibility.Public then
                     let memberDoc = memberSymbol.GetDocumentationCommentXml()
-                    if not (String.IsNullOrWhiteSpace(memberDoc)) then
-                        let displayString = memberSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
-                        Console.WriteLine($"  Member: {displayString}")
-                        Console.WriteLine($"  Doc: {memberDoc.Trim()}")
+                    let displayString = memberSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+                    let memberFullName = memberSymbol.ToDisplayString()
+                    
+                    members.[memberFullName] <- { 
+                        Name = memberSymbol.Name; 
+                        Documentation = if String.IsNullOrWhiteSpace(memberDoc) then "" else memberDoc.Trim(); 
+                        DisplayString = displayString 
+                    }
+            
+            types.[fullName] <- { 
+                Name = typeSymbol.Name; 
+                Documentation = if String.IsNullOrWhiteSpace(typeDoc) then "" else typeDoc.Trim(); 
+                Members = members 
+            }
             
             // Visit nested types
             for nestedType in typeSymbol.GetTypeMembers() do
-                visitType nestedType
+                visitType nestedType types
 
-    let rec private visitNamespace (ns: INamespaceSymbol) =
+    let rec private visitNamespace (ns: INamespaceSymbol) (types: Dictionary<string, ApiType>) =
         for typeSymbol in ns.GetTypeMembers() do
-            visitType typeSymbol
+            visitType typeSymbol types
         
         for childNs in ns.GetNamespaceMembers() do
-            visitNamespace childNs
+            visitNamespace childNs types
 
     let private getLatestVersion (packageName: string) = task {
         let! resource = repository.GetResourceAsync<MetadataResource>()
@@ -62,10 +72,11 @@ module PackageProcessor =
             | Some v -> Task.FromResult(Some (NuGetVersion.Parse(v)))
             | None -> getLatestVersion packageName
 
+        let model = { Assemblies = Dictionary<string, ApiAssembly>() }
+
         match nugetVersion with
-        | None -> Console.WriteLine($"Could not find version for package {packageName}")
+        | None -> return model
         | Some v ->
-            Console.WriteLine($"Processing package {packageName} version {v}...")
             let! downloadResource = repository.GetResourceAsync<FindPackageByIdResource>()
             let tempFolder = Path.Combine(Path.GetTempPath(), "NuSkill", $"{packageName}.{v}")
             if Directory.Exists(tempFolder) then Directory.Delete(tempFolder, true)
@@ -82,7 +93,7 @@ module PackageProcessor =
             let bestGroup = libFiles |> Seq.sortByDescending (fun g -> g.TargetFramework.DotNetFrameworkName) |> Seq.tryHead
             
             match bestGroup with
-            | None -> Console.WriteLine("No library files found in package.")
+            | None -> ()
             | Some group ->
                 let extractPath = Path.Combine(tempFolder, "lib")
                 Directory.CreateDirectory(extractPath) |> ignore
@@ -114,6 +125,14 @@ module PackageProcessor =
                                         .AddReferences(reference)
                     
                     let assemblySymbol = compilation.GetAssemblyOrModuleSymbol(reference) :?> IAssemblySymbol
-                    Console.WriteLine($"--- Package Assembly: {assemblySymbol.Name} ({assemblySymbol.Identity.Version}) ---")
-                    visitNamespace assemblySymbol.GlobalNamespace
+                    let identity = assemblySymbol.Identity.ToString()
+                    let apiTypes = Dictionary<string, ApiType>()
+                    visitNamespace assemblySymbol.GlobalNamespace apiTypes
+                    
+                    model.Assemblies.[identity] <- {
+                        Name = assemblySymbol.Name
+                        Version = assemblySymbol.Identity.Version.ToString()
+                        Types = apiTypes
+                    }
+            return model
     }

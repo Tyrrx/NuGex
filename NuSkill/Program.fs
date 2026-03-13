@@ -5,12 +5,23 @@ open NuSkill
 
 [<EntryPoint>]
 let main argv =
-    let targetPath = @"/home/drtz/repos/bluehands/WebFinger-Server-OidcDiscovery/src/WebFinger.Server.OidcDiscovery/WebFinger.Server.OidcDiscovery.sln"    
+    let packageName = "BouncyCastle.NetCore"
 
     MSBuildLocator.RegisterDefaults() |> ignore
-
-    use workspace = MSBuildWorkspace.Create()
     
-    let task = PackageProcessor.processPackage "BouncyCastle.NetCore" None
-    task.Wait()
+    let task = PackageProcessor.processPackage packageName None
+    let model = task.Result
+    
+    for KeyValue(identity, assembly) in model.Assemblies do
+        Console.WriteLine($"--- Assembly: {assembly.Name} ({assembly.Version}) ---")
+        for KeyValue(typeFullName, apiType) in assembly.Types do
+            if not (String.IsNullOrEmpty(apiType.Documentation)) then
+                Console.WriteLine($"Type: {typeFullName}")
+                Console.WriteLine($"Doc: {apiType.Documentation}")
+            
+            for KeyValue(memberFullName, apiMember) in apiType.Members do
+                if not (String.IsNullOrEmpty(apiMember.Documentation)) then
+                    Console.WriteLine($"  Member: {memberFullName}")
+                    Console.WriteLine($"  Doc: {apiMember.Documentation}")
+
     0
