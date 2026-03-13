@@ -10,6 +10,7 @@
         <Compile Include="SolutionProcessor.fs" />
         <Compile Include="PackageProcessor.fs" />
         <Compile Include="SearchService.fs" />
+        <Compile Include="Mcp.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
