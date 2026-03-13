@@ -12,21 +12,28 @@ let main argv =
     let task = PackageProcessor.processPackage packageName None
     let model = task.Result
     
-    for KeyValue(identity, assembly) in model.Assemblies do
-        Console.WriteLine($"--- Assembly: {assembly.Name} ({assembly.Version}) ---")
-        for KeyValue(typeFullName, apiType) in assembly.Types do
-            if not (String.IsNullOrEmpty(apiType.Documentation)) then
-                Console.WriteLine($"Type: {typeFullName}")
-                Console.WriteLine($"Doc: {apiType.Documentation}")
-            
-            for KeyValue(propFullName, apiProp) in apiType.Properties do
-                if not (String.IsNullOrEmpty(apiProp.Documentation)) then
-                    Console.WriteLine($"  Property: {apiProp.Name} ({apiProp.Type})")
-                    Console.WriteLine($"  Doc: {apiProp.Documentation}")
+    let index = SearchIndex(model)
 
-            for KeyValue(memberFullName, apiMember) in apiType.Members do
-                if not (String.IsNullOrEmpty(apiMember.Documentation)) then
-                    Console.WriteLine($"  Member: {memberFullName}")
-                    Console.WriteLine($"  Doc: {apiMember.Documentation}")
+    Console.WriteLine("--- Fuzzy Type Search: 'AesEngine' ---")
+    let typeResults = index.SearchTypes("AesEngine", 3)
+    for result in typeResults do
+        Console.WriteLine($"[Score: {result.Score}] {result.FullName}")
+        if not (String.IsNullOrEmpty(result.Type.Documentation)) then
+            Console.WriteLine($"  Doc: {result.Type.Documentation.Substring(0, Math.Min(100, result.Type.Documentation.Length))}...")
+
+    Console.WriteLine("\n--- Fuzzy Member Search: 'Init' ---")
+    let memberResults = index.SearchMembers("Init", 5)
+    for result in memberResults do
+        let name = 
+            match result.Member with
+            | Choice1Of2 m -> m.Name
+            | Choice2Of2 p -> p.Name
+        Console.WriteLine($"[Score: {result.Score}] {result.FullName} (in {result.ParentTypeName})")
+        let doc = 
+            match result.Member with
+            | Choice1Of2 m -> m.Documentation
+            | Choice2Of2 p -> p.Documentation
+        if not (String.IsNullOrEmpty(doc)) then
+            Console.WriteLine($"  Doc: {doc.Substring(0, Math.Min(100, doc.Length))}...")
 
     0
