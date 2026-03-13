@@ -14,24 +14,35 @@ module SolutionProcessor =
             let fullName = typeSymbol.ToDisplayString()
             
             let members = Dictionary<string, ApiMember>()
+            let properties = Dictionary<string, ApiProperty>()
             
-            // Visit members
+            // Visit members and properties
             for memberSymbol in typeSymbol.GetMembers() do
                 if memberSymbol.DeclaredAccessibility = Accessibility.Public then
                     let memberDoc = memberSymbol.GetDocumentationCommentXml()
-                    let displayString = memberSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
                     let memberFullName = memberSymbol.ToDisplayString()
-                    
-                    members.[memberFullName] <- { 
-                        Name = memberSymbol.Name; 
-                        Documentation = if String.IsNullOrWhiteSpace(memberDoc) then "" else memberDoc.Trim(); 
-                        DisplayString = displayString 
-                    }
+                    let doc = if String.IsNullOrWhiteSpace(memberDoc) then "" else memberDoc.Trim()
+
+                    match memberSymbol with
+                    | :? IPropertySymbol as propertySymbol ->
+                        properties.[memberFullName] <- {
+                            Name = propertySymbol.Name
+                            Documentation = doc
+                            Type = propertySymbol.Type.ToDisplayString()
+                        }
+                    | _ ->
+                        let displayString = memberSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+                        members.[memberFullName] <- { 
+                            Name = memberSymbol.Name; 
+                            Documentation = doc; 
+                            DisplayString = displayString 
+                        }
             
             types.[fullName] <- { 
                 Name = typeSymbol.Name; 
                 Documentation = if String.IsNullOrWhiteSpace(typeDoc) then "" else typeDoc.Trim(); 
-                Members = members 
+                Members = members
+                Properties = properties
             }
             
             // Visit nested types

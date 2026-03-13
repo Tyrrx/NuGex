@@ -8,10 +8,17 @@ type ApiMember = {
     DisplayString: string
 }
 
+type ApiProperty = {
+    Name: string
+    Documentation: string
+    Type: string
+}
+
 type ApiType = {
     Name: string
     Documentation: string
     Members: Dictionary<string, ApiMember>
+    Properties: Dictionary<string, ApiProperty>
 }
 
 type ApiAssembly = {

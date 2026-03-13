@@ -19,6 +19,11 @@ let main argv =
                 Console.WriteLine($"Type: {typeFullName}")
                 Console.WriteLine($"Doc: {apiType.Documentation}")
             
+            for KeyValue(propFullName, apiProp) in apiType.Properties do
+                if not (String.IsNullOrEmpty(apiProp.Documentation)) then
+                    Console.WriteLine($"  Property: {apiProp.Name} ({apiProp.Type})")
+                    Console.WriteLine($"  Doc: {apiProp.Documentation}")
+
             for KeyValue(memberFullName, apiMember) in apiType.Members do
                 if not (String.IsNullOrEmpty(apiMember.Documentation)) then
                     Console.WriteLine($"  Member: {memberFullName}")
