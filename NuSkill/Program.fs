@@ -11,6 +11,6 @@ let main argv =
 
     use workspace = MSBuildWorkspace.Create()
     
-    let task = SolutionProcessor.processSolution workspace targetPath
+    let task = PackageProcessor.processPackage "BouncyCastle.NetCore" None
     task.Wait()
     0
