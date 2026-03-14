@@ -41,15 +41,26 @@ type PackageArgs =
             | Limit _ -> "Maximum number of results to return (default: 5)."
             | Max_Doc_Chars _ -> "Maximum characters of XML documentation to return per result (default: 1000)."
 
+type PackageReadmeArgs =
+    | [<MainCommand; Mandatory>] Package_Id of string
+    | [<AltCommandLine("-v")>] Version of string
+    interface IArgParserTemplate with
+        member s.Usage =
+            match s with
+            | Package_Id _ -> "The NuGet package ID (e.g. 'Newtonsoft.Json')."
+            | Version _ -> "Optional version string. If omitted, the latest stable version is used."
+
 type Arguments =
     | [<CliPrefix(CliPrefix.None)>] Search_Solution of ParseResults<SolutionArgs>
     | [<CliPrefix(CliPrefix.None)>] Search_Package of ParseResults<PackageArgs>
+    | [<CliPrefix(CliPrefix.None)>] Get_Package_Readme of ParseResults<PackageReadmeArgs>
     | [<AltCommandLine("-m")>] Mcp
     interface IArgParserTemplate with
         member s.Usage =
             match s with
             | Search_Solution _ -> "Indexes and fuzzy searches a local .NET solution."
             | Search_Package _ -> "Downloads and indexes a NuGet package to search its public API."
+            | Get_Package_Readme _ -> "Retrieves the README content of a NuGet package."
             | Mcp -> "Starts the Model Context Protocol (MCP) server."
 
 module CliHandler =
@@ -73,7 +84,7 @@ module CliHandler =
 
     let handleSearchSolution (res: ParseResults<SolutionArgs>) = task {
         let solutionPath = res.GetResult(SolutionArgs.Path)
-        let query = res.GetResult(SolutionArgs.Query)
+        let query = res.GetResult(SolutionArgs.Query, defaultValue = "")
         let scope = res.GetResult(SolutionArgs.Scope, defaultValue = SearchScope.Member)
         let limit = res.GetResult(SolutionArgs.Limit, defaultValue = 5)
         let maxDocChars = res.GetResult(SolutionArgs.Max_Doc_Chars, defaultValue = 1000)
@@ -108,7 +119,7 @@ module CliHandler =
 
     let handleSearchPackage (res: ParseResults<PackageArgs>) = task {
         let packageName = res.GetResult(PackageArgs.Package_Id)
-        let query = res.GetResult(PackageArgs.Query)
+        let query = res.GetResult(PackageArgs.Query, defaultValue = "")
         let version = res.TryGetResult(PackageArgs.Version)
         let scope = res.GetResult(PackageArgs.Scope, defaultValue = SearchScope.Member)
         let limit = res.GetResult(PackageArgs.Limit, defaultValue = 5)
@@ -137,5 +148,14 @@ module CliHandler =
                     {| FullName = r.FullName; ParentType = r.ParentTypeName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
         
         printResults results
+        return 0
+    }
+
+    let handleGetPackageReadme (res: ParseResults<PackageReadmeArgs>) = task {
+        let packageName = res.GetResult(PackageReadmeArgs.Package_Id)
+        let version = res.TryGetResult(PackageReadmeArgs.Version)
+        
+        let! readme = PackageProcessor.getPackageReadme packageName version
+        printfn "%s" readme
         return 0
     }

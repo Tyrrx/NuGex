@@ -122,3 +122,14 @@ type NuGexTools(cache: ISearchIndexCache, logger: ILogger<NuGexTools>) =
                 let doc = NuGexTools.FormatDoc rawDoc maxDocCharsVal
                 {| FullName = r.FullName; ParentType = r.ParentTypeName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
     }
+
+    [<McpServerTool; Description("Retrieves the README content of a NuGet package.")>]
+    member _.GetPackageReadme
+        (
+            [<Description("The NuGet package ID (e.g. 'FunicularSwitch').")>] packageName: string,
+            [<Description("Optional version string. If omitted, the latest stable version is used.")>] packageVersion: string
+        ) = task {
+        let version = if String.IsNullOrWhiteSpace(packageVersion) then None else Some packageVersion
+        let! readme = PackageProcessor.getPackageReadme packageName version
+        return readme
+    }

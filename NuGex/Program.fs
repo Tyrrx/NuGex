@@ -41,6 +41,8 @@ let main argv =
                 (CliHandler.handleSearchSolution res).GetAwaiter().GetResult()
             | Search_Package res -> 
                 (CliHandler.handleSearchPackage res).GetAwaiter().GetResult()
+            | Get_Package_Readme res ->
+                (CliHandler.handleGetPackageReadme res).GetAwaiter().GetResult()
             | _ -> 
                 printfn "%s" (parser.PrintUsage())
                 0

@@ -77,27 +77,36 @@ module PackageProcessor =
                |> Seq.tryHead
     }
 
-    let processPackage (packageName: string) (version: string option) = task {
+    let private downloadPackage (packageName: string) (version: string option) = task {
         let! nugetVersion = 
             match version with
             | Some v -> Task.FromResult(Some (NuGetVersion.Parse(v)))
             | None -> getLatestVersion packageName
 
-        let model = { Assemblies = Dictionary<string, ApiAssembly>() }
-
         match nugetVersion with
-        | None -> return model
+        | None -> return None
         | Some v ->
-            let! downloadResource = repository.GetResourceAsync<FindPackageByIdResource>()
             let tempFolder = Path.Combine(Path.GetTempPath(), "NuGex", $"{packageName}.{v}")
-            if Directory.Exists(tempFolder) then Directory.Delete(tempFolder, true)
-            Directory.CreateDirectory(tempFolder) |> ignore
+            if not (Directory.Exists(tempFolder)) then
+                Directory.CreateDirectory(tempFolder) |> ignore
 
             let nupkgPath = Path.Combine(tempFolder, $"{packageName}.{v}.nupkg")
-            using (new FileStream(nupkgPath, FileMode.Create)) (fun fs ->
-                downloadResource.CopyNupkgToStreamAsync(packageName, v, fs, cache, logger, CancellationToken.None).Wait()
-            )
+            if not (File.Exists(nupkgPath)) then
+                let! downloadResource = repository.GetResourceAsync<FindPackageByIdResource>()
+                use fs = new FileStream(nupkgPath, FileMode.Create)
+                let! _ = downloadResource.CopyNupkgToStreamAsync(packageName, v, fs, cache, logger, CancellationToken.None)
+                ()
+            
+            return Some (nupkgPath, tempFolder)
+    }
 
+    let processPackage (packageName: string) (version: string option) = task {
+        let! packageInfo = downloadPackage packageName version
+        let model = { Assemblies = Dictionary<string, ApiAssembly>() }
+
+        match packageInfo with
+        | None -> return model
+        | Some (nupkgPath, tempFolder) ->
             use packageReader = new PackageArchiveReader(nupkgPath)
             let libFiles = packageReader.GetLibItems() |> Seq.toList
             
@@ -107,15 +116,18 @@ module PackageProcessor =
             | None -> ()
             | Some group ->
                 let extractPath = Path.Combine(tempFolder, "lib")
-                Directory.CreateDirectory(extractPath) |> ignore
+                if not (Directory.Exists(extractPath)) then
+                    Directory.CreateDirectory(extractPath) |> ignore
                 
                 let dlls = new List<string>()
                 let xmls = new Dictionary<string, string>()
 
                 for item in group.Items do
-                    let entry = packageReader.GetEntry(item)
                     let targetFile = Path.Combine(extractPath, Path.GetFileName(item))
-                    entry.ExtractToFile(targetFile, true)
+                    if not (File.Exists(targetFile)) then
+                        let entry = packageReader.GetEntry(item)
+                        entry.ExtractToFile(targetFile, true)
+                    
                     if targetFile.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) then
                         dlls.Add(targetFile)
                     elif targetFile.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) then
@@ -146,4 +158,34 @@ module PackageProcessor =
                         Types = apiTypes
                     }
             return model
+    }
+
+    let getPackageReadme (packageName: string) (version: string option) = task {
+        let! packageInfo = downloadPackage packageName version
+        match packageInfo with
+        | None -> return "Package not found."
+        | Some (nupkgPath, _) ->
+            use packageReader = new PackageArchiveReader(nupkgPath)
+            let nuspec = packageReader.NuspecReader
+            let readmePath = nuspec.GetReadme()
+            
+            let entry = 
+                if not (String.IsNullOrWhiteSpace(readmePath)) then
+                    packageReader.GetEntry(readmePath)
+                else
+                    // Fallback: search for files named readme.md or readme.txt in the root
+                    // GetFiles returns all files in the package
+                    packageReader.GetFiles()
+                    |> Seq.tryFind (fun f -> 
+                        let name = Path.GetFileName(f).ToLowerInvariant()
+                        name.StartsWith("readme") && (name.EndsWith(".md") || name.EndsWith(".txt")))
+                    |> Option.map packageReader.GetEntry
+                    |> Option.toObj
+
+            if isNull entry then
+                return "No README file found in the package."
+            else
+                use stream = entry.Open()
+                use reader = new StreamReader(stream)
+                return! reader.ReadToEndAsync()
     }
