@@ -19,18 +19,28 @@ By extracting types, members, and XML documentation and exposing them via a fuzz
 
 NuGex provides a Nix flake for reproducible builds on NixOS or any system with Nix installed.
 
+#### Build & Run
 ```bash
-# Build the standalone binary
+# Build the standalone binary (outputs to ./result/bin/nugex)
 nix build
 
-# Run directly
-nix run github:Tyrrx/NuGex -- --mcp
+# Run the local build
+./result/bin/nugex --mcp
 
-# Or with ssh
-nix run git+ssh://git@github.com/Tyrrx/NuGex.git -- --mcp
+# Run directly from GitHub
+nix run github:Tyrrx/NuGex -- --mcp
 ```
 
-*Note: If building from source, ensure you generate the dependency lock via `nix build .#default.passthru.fetch-deps` first.*
+#### Updating Dependencies
+If you've modified `NuGex.fsproj` (e.g., added a NuGet package), you must update the Nix dependency lock file:
+
+1.  **Generate the update script**:
+```bash
+nix build .#default.passthru.fetch-deps && ./result nix/deps.json && rm result
+```
+
+*Note: The `fetch-deps` script requires the `dotnet` CLI to be available in your environment.*
+
 
 ### .NET 10 SDK
 
