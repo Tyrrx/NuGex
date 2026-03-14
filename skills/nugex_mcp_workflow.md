@@ -17,6 +17,7 @@ Once a relevant Type (Class/Interface) is found, explore its API surface to unde
 ### 3. External Library Research
 Before adding a new NuGet package or when using an existing one without local documentation.
 - **NuGex Action**: Call `search_package` with `packageName = "Package.Name"` and `scope = "Type"`.
+- **NuGex Action**: Call `get_package_readme` with `packageName = "Package.Name"` to understand the library's high-level purpose and usage examples.
 - **Usage**: Search for core entry points (e.g., "Client", "Builder", "Factory").
 
 ### 4. Implementation Loop
