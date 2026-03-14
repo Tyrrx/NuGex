@@ -25,6 +25,9 @@ nix build
 
 # Run directly
 nix run github:Tyrrx/NuGex -- --mcp
+
+# Or with ssh
+nix run git+ssh://git@github.com/Tyrrx/NuGex.git -- --mcp
 ```
 
 *Note: If building from source, ensure you generate the dependency lock via `nix build .#default.passthru.fetch-deps` first.*
