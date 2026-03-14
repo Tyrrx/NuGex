@@ -1,4 +1,4 @@
-namespace NuSkill
+namespace NuGex
 
 open System
 open System.Collections.Concurrent
@@ -156,7 +156,7 @@ module Mcp =
                             let res = 
                                 {| protocolVersion = "2024-11-05"
                                    capabilities = {| tools = obj() |}
-                                   serverInfo = {| name = "NuSkill"; version = "1.0.0" |} |}
+                                   serverInfo = {| name = "NuGex"; version = "1.0.0" |} |}
                             Task.FromResult(res :> obj)
                         | "list_tools" -> 
                             let t1 = 

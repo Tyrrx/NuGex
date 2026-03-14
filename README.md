@@ -1,8 +1,8 @@
-# NuSkill
+# NuGex
 
-NuSkill is a high-performance .NET analysis tool and [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server. It enables Large Language Models (LLMs) to understand the API surface area of local .NET solutions and NuGet packages without needing pre-existing documentation.
+NuGex is a high-performance .NET analysis tool and [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server. It enables Large Language Models (LLMs) to understand the API surface area of local .NET solutions and NuGet packages without needing pre-existing documentation.
 
-By extracting types, members, and XML documentation and exposing them via a fuzzy search index, NuSkill allows agents to "explore" a library's capabilities on-demand.
+By extracting types, members, and XML documentation and exposing them via a fuzzy search index, NuGex allows agents to "explore" a library's capabilities on-demand.
 
 ## 🚀 Features
 
@@ -17,14 +17,14 @@ By extracting types, members, and XML documentation and exposing them via a fuzz
 
 ### Nix (Recommended)
 
-NuSkill provides a Nix flake for reproducible builds on NixOS or any system with Nix installed.
+NuGex provides a Nix flake for reproducible builds on NixOS or any system with Nix installed.
 
 ```bash
 # Build the standalone binary
 nix build
 
 # Run directly
-nix run github:bluehands/NuSkill -- --mcp
+nix run github:bluehands/NuGex -- --mcp
 ```
 
 *Note: If building from source, ensure you generate the dependency lock via `nix build .#default.passthru.fetch-deps` first.*
@@ -35,20 +35,20 @@ If you have the .NET 10 SDK installed:
 
 ```bash
 # Clone and run
-dotnet run --project NuSkill/NuSkill.fsproj -- --mcp
+dotnet run --project NuGex/NuGex.fsproj -- --mcp
 ```
 
 ## 🛠 Usage
 
 ### 1. Configure as an MCP Server
 
-Add NuSkill to your `claude_desktop_config.json`:
+Add NuGex to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "nuskill": {
-      "command": "/path/to/nuskill",
+    "NuGex": {
+      "command": "/path/to/NuGex",
       "args": ["--mcp"]
     }
   }
@@ -67,10 +67,10 @@ Add NuSkill to your `claude_desktop_config.json`:
 
 ### 3. Demo Mode
 
-Run NuSkill without flags to see it in action analyzing a sample package:
+Run NuGex without flags to see it in action analyzing a sample package:
 
 ```bash
-./nuskill
+./NuGex
 ```
 
 ## 🏗 Development
@@ -79,7 +79,7 @@ Run NuSkill without flags to see it in action analyzing a sample package:
 - **Clean**: `dotnet clean`
 - **Lint**: Follow the guidelines in [AGENTS.md](./AGENTS.md).
 
-NuSkill is written in **F#** and leverages **Roslyn** (Microsoft.CodeAnalysis) for deep assembly and source code inspection.
+NuGex is written in **F#** and leverages **Roslyn** (Microsoft.CodeAnalysis) for deep assembly and source code inspection.
 
 ## 📄 License
 

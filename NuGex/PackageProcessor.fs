@@ -1,4 +1,4 @@
-namespace NuSkill
+namespace NuGex
 
 open System
 open System.IO
@@ -89,7 +89,7 @@ module PackageProcessor =
         | None -> return model
         | Some v ->
             let! downloadResource = repository.GetResourceAsync<FindPackageByIdResource>()
-            let tempFolder = Path.Combine(Path.GetTempPath(), "NuSkill", $"{packageName}.{v}")
+            let tempFolder = Path.Combine(Path.GetTempPath(), "NuGex", $"{packageName}.{v}")
             if Directory.Exists(tempFolder) then Directory.Delete(tempFolder, true)
             Directory.CreateDirectory(tempFolder) |> ignore
 

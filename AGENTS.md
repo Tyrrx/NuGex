@@ -1,14 +1,14 @@
-# NuSkill Agent Guide
+# NuGex Agent Guide
 
-This document provides essential information for autonomous agents contributing to the NuSkill repository.
+This document provides essential information for autonomous agents contributing to the NuGex repository.
 
 ## 🛠 Build & Development
 
-NuSkill is a .NET 10.0 F# project.
+NuGex is a .NET 10.0 F# project.
 
 - **Build Project**: `dotnet build`
-- **Run MCP Server**: `dotnet run --project NuSkill/NuSkill.fsproj -- --mcp`
-- **Run Demo Mode**: `dotnet run --project NuSkill/NuSkill.fsproj`
+- **Run MCP Server**: `dotnet run --project NuGex/NuGex.fsproj -- --mcp`
+- **Run Demo Mode**: `dotnet run --project NuGex/NuGex.fsproj`
 - **Restore Dependencies**: `dotnet restore`
 - **Clean Build Artifacts**: `dotnet clean`
 
@@ -21,7 +21,7 @@ NuSkill is a .NET 10.0 F# project.
 
 ### 1. F# Language & Formatting
 - **Indentation**: Use 4 spaces for indentation. Rigorously follow F# indentation rules, especially for nested constructs like anonymous records.
-- **Anonymous Records**: When using anonymous records (e.g., `{| Name = "NuSkill" |}`), ensure properties are aligned and the closing `|}` is correctly placed to avoid `FS0010` and `FS0058` errors.
+- **Anonymous Records**: When using anonymous records (e.g., `{| Name = "NuGex" |}`), ensure properties are aligned and the closing `|}` is correctly placed to avoid `FS0010` and `FS0058` errors.
 - **Array Literals**: Use `[| ... |]` for arrays that need to be serialized to JSON, as `System.Text.Json` treats F# lists as enumerable but handles arrays natively with better performance.
 - **Task Computation Expressions**: Use `task { ... }` (from `System.Threading.Tasks`) for asynchronous operations to ensure compatibility with standard .NET Task-based APIs.
 - **Pipeline Operator**: Use the `|>` operator to chain transformations, keeping one operation per line for complex pipelines.
@@ -52,7 +52,7 @@ NuSkill is a .NET 10.0 F# project.
 - **Immutable Data**: Prefer immutable records and F# collections (`Map`, `List`, `Set`) for internal state representation. Use `Dictionary` or `ConcurrentDictionary` only when performance or thread-safety requires it.
 
 ## 📦 Dependency Management
-NuSkill has specific dependency constraints to avoid MSBuild/NuGet runtime conflicts:
+NuGex has specific dependency constraints to avoid MSBuild/NuGet runtime conflicts:
 - `Microsoft.Build.Framework` and `NuGet.Frameworks` must be marked with `ExcludeAssets="runtime" PrivateAssets="all"` in the `.fsproj`.
 - Always verify that new package additions do not introduce version conflicts with `Microsoft.CodeAnalysis`.
 
@@ -64,7 +64,7 @@ NuSkill has specific dependency constraints to avoid MSBuild/NuGet runtime confl
 5. **Security**: Never commit secrets or API keys. Ensure `Console.Error` is used for all non-RPC output.
 
 ## 📋 Best Practices for Agents
-- **Context Awareness**: Always check `NuSkill.fsproj` for compilation order; F# is order-dependent.
+- **Context Awareness**: Always check `NuGex.fsproj` for compilation order; F# is order-dependent.
 - **Incremental Changes**: Make small, testable changes rather than large refactors.
 - **Documentation**: Keep the `AGENTS.md` and other documentation updated as the project evolves.
 - **Performance**: Be mindful of indexing time for large solutions; use progress reporting to `Console.Error`.

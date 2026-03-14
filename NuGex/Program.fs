@@ -1,7 +1,7 @@
 ﻿open System
 open Microsoft.Build.Locator
 open Microsoft.CodeAnalysis.MSBuild
-open NuSkill
+open NuGex
 
 [<EntryPoint>]
 let main argv =

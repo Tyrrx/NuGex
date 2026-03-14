@@ -1,4 +1,4 @@
-namespace NuSkill
+namespace NuGex
 
 open System
 open System.Collections.Generic

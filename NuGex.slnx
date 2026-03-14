@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/SolutionItems/">
+    <File Path="AGENTS.md" />
+    <File Path="flake.lock" />
+    <File Path="flake.nix" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="NuGex\NuGex.fsproj" />
+</Solution>

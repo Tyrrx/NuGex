@@ -1,5 +1,5 @@
 {
-  description = "NuSkill: A .NET analysis tool and MCP server";
+  description = "NuGex: A .NET analysis tool and MCP server";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -15,7 +15,7 @@
         dotnet-sdk = pkgs.dotnetCorePackages.sdk_10_0;
         
         # Binary name
-        pname = "nuskill";
+        pname = "nugex";
         version = "0.1.0";
       in
       {
@@ -23,7 +23,7 @@
           inherit pname version;
           
           src = ./.;
-          projectFile = "NuSkill/NuSkill.fsproj";
+          projectFile = "NuGex/NuGex.fsproj";
           
           nugetDeps = ./nix/deps.json;
 
@@ -45,14 +45,14 @@
           # Post-install logic to ensure the binary is named correctly and executable
           postInstall = ''
             mkdir -p $out/bin
-            if [ -f $out/lib/${pname}/NuSkill ]; then
-              ln -s $out/lib/${pname}/NuSkill $out/bin/${pname}
+            if [ -f $out/lib/${pname}/NuGex ]; then
+              ln -s $out/lib/${pname}/NuGex $out/bin/${pname}
             fi
           '';
 
           meta = with pkgs.lib; {
-            description = "NuSkill MCP Server and .NET analysis tool";
-            homepage = "https://github.com/bluehands/NuSkill";
+            description = "NuGex MCP Server and .NET analysis tool";
+            homepage = "https://github.com/bluehands/NuGex";
             license = licenses.mit;
             platforms = platforms.linux;
           };
@@ -66,7 +66,7 @@
           ];
           
           shellHook = ''
-            echo "NuSkill development environment (using .NET 10)"
+            echo "NuGex development environment (using .NET 10)"
             export DOTNET_ROOT=${dotnet-sdk}
           '';
         };
