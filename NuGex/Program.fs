@@ -5,55 +5,49 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open ModelContextProtocol.Server
 open NuGex
+open Argu
 
 [<EntryPoint>]
 let main argv =
-    let isMcpMode = argv |> Array.exists (fun a -> a = "--mcp")
-
-    if isMcpMode then
-        MSBuildLocator.RegisterDefaults() |> ignore
+    let parser = ArgumentParser.Create<Arguments>(programName = "nugex")
+    
+    try
+        let results = parser.Parse(argv)
         
-        let builder = Host.CreateApplicationBuilder(argv)
-        
-        builder.Logging.AddConsole(fun options ->
-            options.LogToStandardErrorThreshold <- LogLevel.Trace
-        ) |> ignore
+        // Register MSBuild before any indexing logic
+        if not (MSBuildLocator.IsRegistered) then
+            MSBuildLocator.RegisterDefaults() |> ignore
 
-        builder.Services
-            .AddSingleton<ISearchIndexCache, SearchIndexCache>()
-            .AddMcpServer()
-            .WithStdioServerTransport()
-            .WithToolsFromAssembly()
-            |> ignore
+        if results.Contains(Mcp) then
+            let builder = Host.CreateApplicationBuilder(argv)
+            
+            builder.Logging.AddConsole(fun options ->
+                options.LogToStandardErrorThreshold <- LogLevel.Trace
+            ) |> ignore
 
-        let host = builder.Build()
-        host.RunAsync().GetAwaiter().GetResult()
-        0
-    else
-        // Demo Mode
-        let packageName = "BouncyCastle.NetCore"
-        MSBuildLocator.RegisterDefaults() |> ignore
-        
-        let task = PackageProcessor.processPackage packageName None
-        let model = task.Result
-        let index = SearchIndex(model)
+            builder.Services
+                .AddSingleton<ISearchIndexCache, SearchIndexCache>()
+                .AddMcpServer()
+                .WithStdioServerTransport()
+                .WithToolsFromAssembly()
+                |> ignore
 
-        Console.WriteLine("--- Fuzzy Type Search: 'AesEngine' ---")
-        let typeResults = index.SearchTypes("AesEngine", 3)
-        for result in typeResults do
-            Console.WriteLine($"[Score: {result.Score}] {result.FullName}")
-            if not (String.IsNullOrEmpty(result.Type.Documentation)) then
-                Console.WriteLine($"  Doc: {result.Type.Documentation.Substring(0, Math.Min(100, result.Type.Documentation.Length))}...")
-
-        Console.WriteLine("\n--- Fuzzy Member Search: 'Init' ---")
-        let memberResults = index.SearchMembers("Init", 5)
-        for result in memberResults do
-            Console.WriteLine($"[Score: {result.Score}] {result.FullName} (in {result.ParentTypeName})")
-            let doc = 
-                match result.Member with
-                | Choice1Of2 m -> m.Documentation
-                | Choice2Of2 p -> p.Documentation
-            if not (String.IsNullOrEmpty(doc)) then
-                Console.WriteLine($"  Doc: {doc.Substring(0, Math.Min(100, doc.Length))}...")
-
-        0
+            let host = builder.Build()
+            host.RunAsync().GetAwaiter().GetResult()
+            0
+        else
+            match results.GetSubCommand() with
+            | Search_Solution res -> 
+                (CliHandler.handleSearchSolution res).GetAwaiter().GetResult()
+            | Search_Package res -> 
+                (CliHandler.handleSearchPackage res).GetAwaiter().GetResult()
+            | _ -> 
+                printfn "%s" (parser.PrintUsage())
+                0
+    with 
+    | :? ArguParseException as ex -> 
+        printfn "%s" ex.Message
+        1
+    | ex ->
+        printfn "Error: %s" ex.Message
+        1

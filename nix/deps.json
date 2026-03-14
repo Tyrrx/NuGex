@@ -1,5 +1,10 @@
 [
   {
+    "pname": "Argu",
+    "version": "6.2.5",
+    "hash": "sha256-5HcZcvco4e8+hgLhzlxk7ZmFVLtZL9LVr7LbmXsLmNU="
+  },
+  {
     "pname": "FuzzySharp",
     "version": "2.0.2",
     "hash": "sha256-GuWqVOo+AG8MSvIbusLPjKfJFQRJhSSJ9eGWljTBA/c="
@@ -320,6 +325,11 @@
     "hash": "sha256-F5fpTUs3Rr7yP/NyIzr+Xn5NdTXXp8rrjBnF9UBBUog="
   },
   {
+    "pname": "System.Configuration.ConfigurationManager",
+    "version": "4.4.0",
+    "hash": "sha256-+8wGYllXnIxRzy9dLhZFB88GoPj8ivYXS0KUfcivT8I="
+  },
+  {
     "pname": "System.Diagnostics.EventLog",
     "version": "10.0.5",
     "hash": "sha256-SwmQif5X/T4cIPPNkVf6QsvA3oBLb85iJXNkb3GT+sU="
@@ -328,6 +338,11 @@
     "pname": "System.Security.Cryptography.Pkcs",
     "version": "8.0.1",
     "hash": "sha256-KMNIkJ3yQ/5O6WIhPjyAIarsvIMhkp26A6aby5KkneU="
+  },
+  {
+    "pname": "System.Security.Cryptography.ProtectedData",
+    "version": "4.4.0",
+    "hash": "sha256-Ri53QmFX8I8UH0x4PikQ1ZA07ZSnBUXStd5rBfGWFOE="
   },
   {
     "pname": "System.Security.Cryptography.ProtectedData",

@@ -31,17 +31,17 @@ type SearchIndexCache() =
 [<McpServerToolType>]
 type NuGexTools(cache: ISearchIndexCache, logger: ILogger<NuGexTools>) =
 
-    static let stripXml (xml: string) =
+    static member StripXml (xml: string) =
         if String.IsNullOrWhiteSpace(xml) then ""
         else Regex.Replace(xml, "<.*?>", "")
 
-    static let truncate (text: string) (max: int) =
+    static member Truncate (text: string) (max: int) =
         if String.IsNullOrWhiteSpace(text) then ""
         elif text.Length <= max then text
         else text.Substring(0, max) + "..."
 
-    static let formatDoc (doc: string) (maxChars: int) =
-        doc |> stripXml |> (fun s -> truncate s maxChars)
+    static member FormatDoc (doc: string) (maxChars: int) =
+        doc |> NuGexTools.StripXml |> (fun s -> NuGexTools.Truncate s maxChars)
 
     [<McpServerTool; Description("Indexes and fuzzy searches the public API (Types, Methods, Properties) of a local .NET solution. Use this to understand the structure and available members of a codebase you are currently working in.")>]
     member _.SearchSolution
@@ -71,7 +71,7 @@ type NuGexTools(cache: ISearchIndexCache, logger: ILogger<NuGexTools>) =
         if scope.Equals("Type", StringComparison.OrdinalIgnoreCase) then
             let results = index.SearchTypes(query, limitVal)
             return results |> List.map (fun r -> 
-                let doc = formatDoc r.Type.Documentation maxDocCharsVal
+                let doc = NuGexTools.FormatDoc r.Type.Documentation maxDocCharsVal
                 {| FullName = r.FullName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
         else
             let results = index.SearchMembers(query, limitVal)
@@ -80,7 +80,7 @@ type NuGexTools(cache: ISearchIndexCache, logger: ILogger<NuGexTools>) =
                     match r.Member with
                     | Choice1Of2 m -> m.Documentation
                     | Choice2Of2 p -> p.Documentation
-                let doc = formatDoc rawDoc maxDocCharsVal
+                let doc = NuGexTools.FormatDoc rawDoc maxDocCharsVal
                 {| FullName = r.FullName; ParentType = r.ParentTypeName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
     }
 
@@ -110,7 +110,7 @@ type NuGexTools(cache: ISearchIndexCache, logger: ILogger<NuGexTools>) =
         if scope.Equals("Type", StringComparison.OrdinalIgnoreCase) then
             let results = index.SearchTypes(query, limitVal)
             return results |> List.map (fun r -> 
-                let doc = formatDoc r.Type.Documentation maxDocCharsVal
+                let doc = NuGexTools.FormatDoc r.Type.Documentation maxDocCharsVal
                 {| FullName = r.FullName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
         else
             let results = index.SearchMembers(query, limitVal)
@@ -119,6 +119,6 @@ type NuGexTools(cache: ISearchIndexCache, logger: ILogger<NuGexTools>) =
                     match r.Member with
                     | Choice1Of2 m -> m.Documentation
                     | Choice2Of2 p -> p.Documentation
-                let doc = formatDoc rawDoc maxDocCharsVal
+                let doc = NuGexTools.FormatDoc rawDoc maxDocCharsVal
                 {| FullName = r.FullName; ParentType = r.ParentTypeName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
     }
