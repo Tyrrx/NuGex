@@ -57,11 +57,20 @@ module SolutionProcessor =
             visitNamespace childNs types
 
     let processSolution (workspace: MSBuildWorkspace) (targetPath: string) = task {
-        let! solution = workspace.OpenSolutionAsync(targetPath)
+        let! (projects: IEnumerable<Project>) = 
+            task {
+                if targetPath.EndsWith(".sln", StringComparison.OrdinalIgnoreCase) then
+                    let! solution = workspace.OpenSolutionAsync(targetPath)
+                    return solution.Projects
+                else
+                    let! project = workspace.OpenProjectAsync(targetPath)
+                    return [| project |] :> IEnumerable<Project>
+            }
+        
         let model = { Assemblies = Dictionary<string, ApiAssembly>() }
         let processedAssemblies = HashSet<string>()
 
-        for project in solution.Projects do
+        for project in projects do
             let! compilation = project.GetCompilationAsync()
             
             if compilation <> null then

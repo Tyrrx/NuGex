@@ -56,12 +56,17 @@ type NuGexTools(cache: ISearchIndexCache, logger: ILogger<NuGexTools>) =
         let limitVal = if limit.HasValue then limit.Value else 5
         let maxDocCharsVal = if maxDocChars.HasValue then maxDocChars.Value else 1000
 
-        let! index = cache.GetOrAdd(solutionPath, fun () -> task {
-            logger.LogInformation("Indexing solution: {SolutionPath}", solutionPath)
-            use workspace = MSBuildWorkspace.Create()
-            let! model = SolutionProcessor.processSolution workspace solutionPath
-            return SearchIndex(model)
-        })
+        let! index = 
+            try
+                cache.GetOrAdd(solutionPath, fun () -> task {
+                    logger.LogInformation("Indexing solution: {SolutionPath}", solutionPath)
+                    use workspace = MSBuildWorkspace.Create()
+                    let! model = SolutionProcessor.processSolution workspace solutionPath
+                    return SearchIndex(model)
+                })
+            with ex ->
+                logger.LogError(ex, "Error indexing solution: {SolutionPath}", solutionPath)
+                reraise()
 
         if scope.Equals("Type", StringComparison.OrdinalIgnoreCase) then
             let results = index.SearchTypes(query, limitVal)
