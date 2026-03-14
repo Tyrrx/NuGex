@@ -161,28 +161,28 @@ module Mcp =
                         | "list_tools" -> 
                             let t1 = 
                                 { name = "search_solution"
-                                  description = "Fuzzy search types or members in a .NET solution"
+                                  description = "Indexes and fuzzy searches the public API (Types, Methods, Properties) of a local .NET solution. Use this to understand the structure and available members of a codebase you are currently working in. Returns ranked results with XML documentation."
                                   inputSchema = 
                                     {| ``type`` = "object"
                                        properties = 
-                                        {| solutionPath = {| ``type`` = "string" |}
-                                           query = {| ``type`` = "string" |}
-                                           scope = {| ``type`` = "string"; enum = [| "Type"; "Member" |] |}
-                                           limit = {| ``type`` = "integer" |}
-                                           maxDocChars = {| ``type`` = "integer" |} |}
+                                        {| solutionPath = {| ``type`` = "string"; description = "Absolute path to the .sln or .fsproj/.csproj file." |}
+                                           query = {| ``type`` = "string"; description = "The name of the type or member to search for (e.g. 'JsonConvert' or 'Serialize')." |}
+                                           scope = {| ``type`` = "string"; enum = [| "Type"; "Member" |]; description = "Whether to search for Type definitions or specific Members (methods/properties)." |}
+                                           limit = {| ``type`` = "integer"; description = "Maximum number of results to return (default: 5)." |}
+                                           maxDocChars = {| ``type`` = "integer"; description = "Maximum characters of XML documentation to return per result (default: 1000)." |} |}
                                        required = [| "solutionPath"; "query"; "scope" |] |} }
                             let t2 = 
                                 { name = "search_package"
-                                  description = "Fuzzy search types or members in a NuGet package"
+                                  description = "Downloads and indexes a NuGet package to search its public API. Use this to explore external libraries before writing code that consumes them. Automatically handles dependency resolution and extracts XML documentation for better context."
                                   inputSchema = 
                                     {| ``type`` = "object"
                                        properties = 
-                                        {| packageName = {| ``type`` = "string" |}
-                                           packageVersion = {| ``type`` = "string" |}
-                                           query = {| ``type`` = "string" |}
-                                           scope = {| ``type`` = "string"; enum = [| "Type"; "Member" |] |}
-                                           limit = {| ``type`` = "integer" |}
-                                           maxDocChars = {| ``type`` = "integer" |} |}
+                                        {| packageName = {| ``type`` = "string"; description = "The NuGet package ID (e.g. 'Microsoft.Extensions.DependencyInjection')." |}
+                                           packageVersion = {| ``type`` = "string"; description = "Optional version string. If omitted, the latest stable version is used." |}
+                                           query = {| ``type`` = "string"; description = "The name of the type or member to search for." |}
+                                           scope = {| ``type`` = "string"; enum = [| "Type"; "Member" |]; description = "Search for Type definitions or Members." |}
+                                           limit = {| ``type`` = "integer"; description = "Maximum number of results to return (default: 5)." |}
+                                           maxDocChars = {| ``type`` = "integer"; description = "Maximum characters of XML documentation to return per result (default: 1000)." |} |}
                                        required = [| "packageName"; "query"; "scope" |] |} }
                             let res = {| tools = [| t1; t2 |] |}
                             Task.FromResult(res :> obj)
