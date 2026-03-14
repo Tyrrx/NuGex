@@ -24,7 +24,7 @@ NuGex provides a Nix flake for reproducible builds on NixOS or any system with N
 nix build
 
 # Run directly
-nix run github:bluehands/NuGex -- --mcp
+nix run github:Tyrrx/NuGex -- --mcp
 ```
 
 *Note: If building from source, ensure you generate the dependency lock via `nix build .#default.passthru.fetch-deps` first.*

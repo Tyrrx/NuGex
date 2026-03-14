@@ -52,7 +52,7 @@
 
           meta = with pkgs.lib; {
             description = "NuGex MCP Server and .NET analysis tool";
-            homepage = "https://github.com/bluehands/NuGex";
+            homepage = "https://github.com/Tyrrx/NuGex";
             license = licenses.mit;
             platforms = platforms.linux;
           };
