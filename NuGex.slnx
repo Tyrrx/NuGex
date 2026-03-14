@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/skills/">
+    <File Path="skills\dotnet_expert.md" />
+    <File Path="skills\nugex_mcp_workflow.md" />
+  </Folder>
   <Folder Name="/SolutionItems/">
     <File Path="AGENTS.md" />
     <File Path="flake.lock" />

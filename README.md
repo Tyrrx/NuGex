@@ -45,19 +45,6 @@ dotnet run --project NuGex/NuGex.fsproj -- --mcp
 
 ### 1. Configure as an MCP Server
 
-Add NuGex to your `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "NuGex": {
-      "command": "/path/to/NuGex",
-      "args": ["--mcp"]
-    }
-  }
-}
-```
-
 ### 2. Available Tools
 
 - **`search_solution`**: Indexes a local .NET solution and searches for specific APIs.
