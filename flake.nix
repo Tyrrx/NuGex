@@ -21,7 +21,7 @@
 
           # Binary name
           pname = "nugex";
-          version = "0.1.1";
+          version = "0.1.2";
         in
         {
           packages.default = pkgs.buildDotnetModule {
@@ -40,9 +40,10 @@
             runtimeId = "linux-x64";
             selfContained = true;
 
-            # Build flags for single file, no trimming, and invariant globalization
+            # Build flags: no trimming, invariant globalization. PublishSingleFile is
+            # intentionally omitted: it bundles Roslyn's out-of-process BuildHost DLL into
+            # the single-file blob, breaking MSBuildWorkspace (search_solution) entirely.
             extraPublishFlags = [
-              "-p:PublishSingleFile=true"
               "-p:PublishTrimmed=false"
               "-p:InvariantGlobalization=true"
             ];
