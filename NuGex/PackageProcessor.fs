@@ -10,15 +10,25 @@ open NuGet.Protocol
 open NuGet.Protocol.Core.Types
 open NuGet.Versioning
 open NuGet.Packaging
+open NuGet.Frameworks
 open Microsoft.CodeAnalysis
 open System.Collections.Generic
 open System.IO.Compression
+open System.Reflection
+open System.Runtime.Versioning
 
 module PackageProcessor =
 
     let private logger = NullLogger.Instance
     let private cache = new SourceCacheContext()
     let private repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json")
+    let private frameworkReducer = FrameworkReducer()
+
+    /// The framework NuGex itself targets, used as the reference point for selecting
+    /// the "best" lib group from a package that ships multiple target frameworks.
+    let private currentFramework =
+        let attr = Assembly.GetEntryAssembly().GetCustomAttribute<TargetFrameworkAttribute>()
+        NuGetFramework.ParseFrameworkName(attr.FrameworkName, DefaultFrameworkNameProvider.Instance)
 
     let rec private visitType (typeSymbol: INamedTypeSymbol) (types: Dictionary<string, ApiType>) =
         if typeSymbol.DeclaredAccessibility = Accessibility.Public then
@@ -110,7 +120,10 @@ module PackageProcessor =
             use packageReader = new PackageArchiveReader(nupkgPath)
             let libFiles = packageReader.GetLibItems() |> Seq.toList
             
-            let bestGroup = libFiles |> Seq.sortByDescending (fun g -> g.TargetFramework.DotNetFrameworkName) |> Seq.tryHead
+            let bestGroup =
+                match frameworkReducer.GetNearest(currentFramework, libFiles |> Seq.map (fun g -> g.TargetFramework)) with
+                | null -> libFiles |> Seq.tryHead
+                | nearest -> libFiles |> Seq.tryFind (fun g -> g.TargetFramework.Equals(nearest))
             
             match bestGroup with
             | None -> ()

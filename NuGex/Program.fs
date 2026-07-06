@@ -50,10 +50,17 @@ let main argv =
             match solutionPath with
             | Some path ->
                 builder.Services.AddSingleton<SolutionContext>({ SolutionPath = path }) |> ignore
+                builder.Services.AddSingleton<SolutionIndexWatcher>(fun sp ->
+                    new SolutionIndexWatcher(cwd, sp.GetRequiredService<SolutionContext>(), sp.GetRequiredService<ISearchIndexCache>(), sp.GetRequiredService<ILogger<SolutionIndexWatcher>>())) |> ignore
                 mcpBuilder.WithTools<SolutionTools>() |> ignore
             | None -> ()
 
             let host = builder.Build()
+
+            // Force eager construction so the watcher starts immediately and is disposed with the host.
+            if solutionPath.IsSome then
+                host.Services.GetRequiredService<SolutionIndexWatcher>() |> ignore
+
             host.RunAsync().GetAwaiter().GetResult()
             0
         else

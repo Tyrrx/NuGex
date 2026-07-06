@@ -60,7 +60,7 @@ dotnet run --project NuGex/NuGex.fsproj -- --mcp
 - **`search_solution`**: Indexes and searches the .NET solution (`.sln`/`.slnx`) found under the MCP server's current working directory. Only available when a solution is found there; project files (`.csproj`/`.fsproj`) alone don't count.
     - `query`: The type or member name to find.
 - **`search_package`**: Downloads and indexes a NuGet package.
-    - `packageName`: e.g., "Newtonsoft.Json".
+    - `packageName`: e.g., "FunicularSwitch".
     - `packageVersion`: (Optional) Specific version.
     - `query`: The type or member name to find.
 

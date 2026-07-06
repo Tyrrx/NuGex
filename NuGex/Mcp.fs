@@ -3,6 +3,7 @@ namespace NuGex
 open System
 open System.Collections.Concurrent
 open System.ComponentModel
+open System.IO
 open System.Text.RegularExpressions
 open System.Threading.Tasks
 open Microsoft.CodeAnalysis.MSBuild
@@ -15,24 +16,60 @@ open Microsoft.Extensions.Logging
 /// </summary>
 type ISearchIndexCache =
     abstract member GetOrAdd: key: string * factory: (unit -> Task<SearchIndex>) -> Task<SearchIndex>
+    abstract member Invalidate: key: string -> unit
 
 type SearchIndexCache() =
-    let registry = ConcurrentDictionary<string, SearchIndex>()
+    let registry = ConcurrentDictionary<string, Lazy<Task<SearchIndex>>>()
     interface ISearchIndexCache with
-        member _.GetOrAdd(key, factory) = task {
-            match registry.TryGetValue(key) with
-            | true, index -> return index
-            | _ ->
-                let! index = factory()
-                registry.TryAdd(key, index) |> ignore
-                return index
-        }
+        member _.GetOrAdd(key, factory) =
+            let lazyIndex = registry.GetOrAdd(key, fun _ -> Lazy<Task<SearchIndex>>(factory, Threading.LazyThreadSafetyMode.ExecutionAndPublication))
+            lazyIndex.Value
+        member _.Invalidate(key) =
+            registry.TryRemove(key) |> ignore
 
 /// <summary>
 /// The solution discovered at MCP server startup, if any. Registered as a DI singleton
 /// only when a solution was found, gating whether <see cref="SolutionTools"/> is registered.
 /// </summary>
 type SolutionContext = { SolutionPath: string }
+
+/// <summary>
+/// Watches the solution's project/solution files and invalidates the cached search index
+/// when any of them change, so a subsequent search_solution call rebuilds from current disk state.
+/// Source files (.cs/.fs) are intentionally not watched.
+/// </summary>
+type SolutionIndexWatcher(root: string, context: SolutionContext, cache: ISearchIndexCache, logger: ILogger<SolutionIndexWatcher>) =
+    let watchedExtensions = set [ ".sln"; ".slnx"; ".csproj"; ".fsproj" ]
+
+    let isWatchedPath (path: string) =
+        let segments = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+        let extension = Path.GetExtension(path).ToLowerInvariant()
+        watchedExtensions.Contains(extension)
+        && not (segments |> Array.exists (fun s -> SolutionDiscovery.skippedDirNames.Contains(s.ToLowerInvariant())))
+
+    let onChanged (path: string) =
+        if isWatchedPath path then
+            logger.LogInformation("Solution file changed: {Path}; invalidating cached index for {SolutionPath}", path, context.SolutionPath)
+            cache.Invalidate(context.SolutionPath)
+
+    let watcher =
+        try
+            let w = new FileSystemWatcher(root)
+            w.IncludeSubdirectories <- true
+            w.NotifyFilter <- NotifyFilters.LastWrite ||| NotifyFilters.FileName ||| NotifyFilters.DirectoryName
+            w.Changed.Add(fun e -> onChanged e.FullPath)
+            w.Created.Add(fun e -> onChanged e.FullPath)
+            w.Deleted.Add(fun e -> onChanged e.FullPath)
+            w.Renamed.Add(fun e -> onChanged e.FullPath; onChanged e.OldFullPath)
+            w.EnableRaisingEvents <- true
+            Some w
+        with ex ->
+            logger.LogError(ex, "Failed to watch solution directory {Root}; search_solution results may become stale after file changes", root)
+            None
+
+    interface IDisposable with
+        member _.Dispose() =
+            watcher |> Option.iter (fun w -> w.Dispose())
 
 module DocFormatting =
 
@@ -97,7 +134,7 @@ type PackageTools(cache: ISearchIndexCache, logger: ILogger<PackageTools>) =
     [<McpServerTool; Description("Downloads and indexes a NuGet package to search its public API. Use this to explore external libraries before writing code that consumes them.")>]
     member _.SearchPackage
         (
-            [<Description("The NuGet package ID (e.g. 'Newtonsoft.Json').")>] packageName: string,
+            [<Description("The NuGet package ID (e.g. 'FunicularSwitch').")>] packageName: string,
             [<Description("The name of the type or member to search for.")>] query: string,
             [<Description("Search for Type definitions or Members.")>] scope: string,
             [<Description("Optional version string. If omitted, the latest stable version is used.")>] packageVersion: string,

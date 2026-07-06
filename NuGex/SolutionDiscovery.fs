@@ -5,7 +5,7 @@ open System.IO
 
 module SolutionDiscovery =
 
-    let private skippedDirNames =
+    let skippedDirNames =
         set [ "bin"; "obj"; ".git"; ".vs"; "node_modules" ]
 
     let private isSkippedDir (dir: DirectoryInfo) =
