@@ -27,7 +27,15 @@ let main argv =
             ) |> ignore
 
             let cwd = Directory.GetCurrentDirectory()
-            let solutionFiles = SolutionDiscovery.findSolutionFiles cwd
+
+            // Discovery runs before the host is built, so it can't resolve an ILogger from DI yet;
+            // this bootstrap factory mirrors the console config registered above for the eventual host.
+            use discoveryLoggerFactory =
+                LoggerFactory.Create(fun lb ->
+                    lb.AddConsole(fun options -> options.LogToStandardErrorThreshold <- LogLevel.Trace) |> ignore)
+            let discoveryLogger = discoveryLoggerFactory.CreateLogger("SolutionDiscovery")
+
+            let solutionFiles = SolutionDiscovery.findSolutionFiles discoveryLogger cwd
             let solutionPath = SolutionDiscovery.pickSolution solutionFiles
 
             match solutionFiles with

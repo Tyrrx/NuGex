@@ -21,7 +21,7 @@
 
           # Binary name
           pname = "nugex";
-          version = "0.1.0";
+          version = "0.1.1";
         in
         {
           packages.default = pkgs.buildDotnetModule {

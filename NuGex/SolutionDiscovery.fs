@@ -2,6 +2,7 @@ namespace NuGex
 
 open System
 open System.IO
+open Microsoft.Extensions.Logging
 
 module SolutionDiscovery =
 
@@ -11,20 +12,24 @@ module SolutionDiscovery =
     let private isSkippedDir (dir: DirectoryInfo) =
         skippedDirNames.Contains(dir.Name.ToLowerInvariant())
 
-    let rec private walk (dir: DirectoryInfo) : string seq =
+    let rec private walk (logger: ILogger) (dir: DirectoryInfo) : string seq =
         seq {
-            for file in dir.EnumerateFiles() do
-                if file.Extension.Equals(".sln", StringComparison.OrdinalIgnoreCase)
-                   || file.Extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase) then
-                    yield file.FullName
+            try
+                for file in dir.EnumerateFiles() do
+                    if file.Extension.Equals(".sln", StringComparison.OrdinalIgnoreCase)
+                       || file.Extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase) then
+                        yield file.FullName
 
-            for subDir in dir.EnumerateDirectories() do
-                if not (isSkippedDir subDir) then
-                    yield! walk subDir
+                for subDir in dir.EnumerateDirectories() do
+                    if not (isSkippedDir subDir) then
+                        yield! walk logger subDir
+            with
+            | (:? UnauthorizedAccessException | :? IOException) as ex ->
+                logger.LogWarning(ex, "Skipping inaccessible directory: {Directory}", dir.FullName)
         }
 
-    let findSolutionFiles (root: string) : string list =
-        walk (DirectoryInfo(root)) |> List.ofSeq
+    let findSolutionFiles (logger: ILogger) (root: string) : string list =
+        walk logger (DirectoryInfo(root)) |> List.ofSeq
 
     let pickSolution (files: string list) : string option =
         files
