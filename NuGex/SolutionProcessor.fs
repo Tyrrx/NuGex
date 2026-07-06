@@ -59,7 +59,8 @@ module SolutionProcessor =
     let processSolution (workspace: MSBuildWorkspace) (targetPath: string) = task {
         let! (projects: IEnumerable<Project>) = 
             task {
-                if targetPath.EndsWith(".sln", StringComparison.OrdinalIgnoreCase) then
+                if targetPath.EndsWith(".sln", StringComparison.OrdinalIgnoreCase)
+                   || targetPath.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) then
                     let! solution = workspace.OpenSolutionAsync(targetPath)
                     return solution.Projects
                 else

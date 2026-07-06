@@ -1,4 +1,5 @@
 open System
+open System.IO
 open Microsoft.Build.Locator
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
@@ -20,17 +21,37 @@ let main argv =
 
         if results.Contains(Mcp) then
             let builder = Host.CreateApplicationBuilder(argv)
-            
+
             builder.Logging.AddConsole(fun options ->
                 options.LogToStandardErrorThreshold <- LogLevel.Trace
             ) |> ignore
 
-            builder.Services
-                .AddSingleton<ISearchIndexCache, SearchIndexCache>()
-                .AddMcpServer()
-                .WithStdioServerTransport()
-                .WithToolsFromAssembly()
-                |> ignore
+            let cwd = Directory.GetCurrentDirectory()
+            let solutionFiles = SolutionDiscovery.findSolutionFiles cwd
+            let solutionPath = SolutionDiscovery.pickSolution solutionFiles
+
+            match solutionFiles with
+            | [] ->
+                eprintfn "No .sln/.slnx found under %s; search_solution tool will not be available." cwd
+            | [ single ] ->
+                eprintfn "Using solution: %s" single
+            | multiple ->
+                eprintfn "Multiple solutions found under %s: %s" cwd (String.Join(", ", multiple))
+                eprintfn "Using solution: %s" (Option.get solutionPath)
+
+            builder.Services.AddSingleton<ISearchIndexCache, SearchIndexCache>() |> ignore
+
+            let mcpBuilder =
+                builder.Services
+                    .AddMcpServer()
+                    .WithStdioServerTransport()
+                    .WithTools<PackageTools>()
+
+            match solutionPath with
+            | Some path ->
+                builder.Services.AddSingleton<SolutionContext>({ SolutionPath = path }) |> ignore
+                mcpBuilder.WithTools<SolutionTools>() |> ignore
+            | None -> ()
 
             let host = builder.Build()
             host.RunAsync().GetAwaiter().GetResult()

@@ -101,7 +101,7 @@ module CliHandler =
             if scopeStr.Equals("Type", StringComparison.OrdinalIgnoreCase) then
                 let searchResults = index.SearchTypes(query, limit)
                 searchResults |> List.map (fun r -> 
-                    let doc = NuGexTools.Truncate r.Type.Documentation maxDocChars
+                    let doc = DocFormatting.truncate r.Type.Documentation maxDocChars
                     {| FullName = r.FullName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
             else
                 let searchResults = index.SearchMembers(query, limit)
@@ -110,7 +110,7 @@ module CliHandler =
                         match r.Member with
                         | Choice1Of2 m -> m.Documentation
                         | Choice2Of2 p -> p.Documentation
-                    let doc = NuGexTools.Truncate rawDoc maxDocChars
+                    let doc = DocFormatting.truncate rawDoc maxDocChars
                     {| FullName = r.FullName; ParentType = r.ParentTypeName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
         
         printResults results
@@ -135,7 +135,7 @@ module CliHandler =
             if scopeStr.Equals("Type", StringComparison.OrdinalIgnoreCase) then
                 let searchResults = index.SearchTypes(query, limit)
                 searchResults |> List.map (fun r -> 
-                    let doc = NuGexTools.Truncate r.Type.Documentation maxDocChars
+                    let doc = DocFormatting.truncate r.Type.Documentation maxDocChars
                     {| FullName = r.FullName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
             else
                 let searchResults = index.SearchMembers(query, limit)
@@ -144,7 +144,7 @@ module CliHandler =
                         match r.Member with
                         | Choice1Of2 m -> m.Documentation
                         | Choice2Of2 p -> p.Documentation
-                    let doc = NuGexTools.Truncate rawDoc maxDocChars
+                    let doc = DocFormatting.truncate rawDoc maxDocChars
                     {| FullName = r.FullName; ParentType = r.ParentTypeName; Score = r.Score; Documentation = doc |} :> obj) |> List.toArray
         
         printResults results

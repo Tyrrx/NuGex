@@ -15,6 +15,7 @@
         <Compile Include="SolutionProcessor.fs" />
         <Compile Include="PackageProcessor.fs" />
         <Compile Include="SearchService.fs" />
+        <Compile Include="SolutionDiscovery.fs" />
         <Compile Include="Mcp.fs" />
         <Compile Include="Cli.fs" />
         <Compile Include="Program.fs" />
@@ -29,7 +30,7 @@
       <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime" PrivateAssets="all" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
       <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
-      <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+      <PackageReference Include="ModelContextProtocol" Version="1.3.0" />
       <PackageReference Include="NuGet.Packaging" Version="7.3.0" />
       <PackageReference Include="NuGet.Protocol" Version="7.3.0" />
       <PackageReference Include="NuGet.Frameworks" Version="7.3.0" ExcludeAssets="runtime" PrivateAssets="all" />
