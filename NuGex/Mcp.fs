@@ -2,6 +2,7 @@ namespace NuGex
 
 open System
 open System.Collections.Concurrent
+open System.Collections.Generic
 open System.ComponentModel
 open System.IO
 open System.Text.RegularExpressions
@@ -23,7 +24,16 @@ type SearchIndexCache() =
     interface ISearchIndexCache with
         member _.GetOrAdd(key, factory) =
             let lazyIndex = registry.GetOrAdd(key, fun _ -> Lazy<Task<SearchIndex>>(factory, Threading.LazyThreadSafetyMode.ExecutionAndPublication))
-            lazyIndex.Value
+            let task = lazyIndex.Value
+            // A faulted/cancelled build must not poison the cache forever: evict it so the
+            // next GetOrAdd call retries instead of replaying the same stale exception.
+            // Only remove if this exact Lazy is still registered, so a concurrent retry
+            // that already replaced it isn't clobbered.
+            task.ContinueWith(fun (t: Task<SearchIndex>) ->
+                if t.IsFaulted || t.IsCanceled then
+                    registry.TryRemove(KeyValuePair(key, lazyIndex)) |> ignore
+            ) |> ignore
+            task
         member _.Invalidate(key) =
             registry.TryRemove(key) |> ignore
 
@@ -61,6 +71,11 @@ type SolutionIndexWatcher(root: string, context: SolutionContext, cache: ISearch
             w.Created.Add(fun e -> onChanged e.FullPath)
             w.Deleted.Add(fun e -> onChanged e.FullPath)
             w.Renamed.Add(fun e -> onChanged e.FullPath; onChanged e.OldFullPath)
+            w.Error.Add(fun e ->
+                // A dropped/overflowed event stream means we can't know what changed;
+                // invalidate defensively so the next search rebuilds from disk.
+                logger.LogWarning(e.GetException(), "File watcher error for {Root}; invalidating cached index for {SolutionPath} as a precaution", root, context.SolutionPath)
+                cache.Invalidate(context.SolutionPath))
             w.EnableRaisingEvents <- true
             Some w
         with ex ->
@@ -101,16 +116,16 @@ type SolutionTools(context: SolutionContext, cache: ISearchIndexCache, logger: I
         let maxDocCharsVal = if maxDocChars.HasValue then maxDocChars.Value else 1000
 
         let! index =
-            try
-                cache.GetOrAdd(context.SolutionPath, fun () -> task {
+            cache.GetOrAdd(context.SolutionPath, fun () -> task {
+                try
                     logger.LogInformation("Indexing solution: {SolutionPath}", context.SolutionPath)
                     use workspace = MSBuildWorkspace.Create()
                     let! model = SolutionProcessor.processSolution workspace context.SolutionPath
                     return SearchIndex(model)
-                })
-            with ex ->
-                logger.LogError(ex, "Error indexing solution: {SolutionPath}", context.SolutionPath)
-                reraise()
+                with ex ->
+                    logger.LogError(ex, "Error indexing solution: {SolutionPath}", context.SolutionPath)
+                    return raise ex
+            })
 
         if scope.Equals("Type", StringComparison.OrdinalIgnoreCase) then
             let results = index.SearchTypes(query, limitVal)
@@ -149,9 +164,13 @@ type PackageTools(cache: ISearchIndexCache, logger: ILogger<PackageTools>) =
         let key = match version with Some v -> $"{packageName}:{v}" | None -> packageName
 
         let! index = cache.GetOrAdd(key, fun () -> task {
-            logger.LogInformation("Indexing package: {PackageKey}", key)
-            let! model = PackageProcessor.processPackage packageName version
-            return SearchIndex(model)
+            try
+                logger.LogInformation("Indexing package: {PackageKey}", key)
+                let! model = PackageProcessor.processPackage packageName version
+                return SearchIndex(model)
+            with ex ->
+                logger.LogError(ex, "Error indexing package: {PackageKey}", key)
+                return raise ex
         })
 
         if scope.Equals("Type", StringComparison.OrdinalIgnoreCase) then
