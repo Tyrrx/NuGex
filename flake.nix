@@ -21,7 +21,7 @@
 
           # Binary name
           pname = "nugex";
-          version = "0.1.3";
+          version = "0.1.4";
         in
         {
           packages.default = pkgs.buildDotnetModule {
@@ -40,13 +40,11 @@
             runtimeId = "linux-x64";
             selfContained = true;
 
-            # Build flags: no trimming, invariant globalization. PublishSingleFile is
-            # intentionally omitted: it bundles Roslyn's out-of-process BuildHost DLL into
-            # the single-file blob, breaking MSBuildWorkspace (search_solution) entirely.
-            extraPublishFlags = [
-              "-p:PublishTrimmed=false"
-              "-p:InvariantGlobalization=true"
-            ];
+            # Trimming, satellite-resource stripping, and debug-symbol removal are configured
+            # in NuGex.fsproj (they're properties of what the app is, not how nix packages it).
+            # PublishSingleFile is intentionally omitted: it bundles Roslyn's out-of-process
+            # BuildHost DLL into the single-file blob, breaking MSBuildWorkspace (search_solution)
+            # entirely.
 
             # Post-install logic to ensure the binary is named correctly and executable
             postInstall = ''
