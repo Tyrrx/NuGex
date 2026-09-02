@@ -7,6 +7,7 @@ open System.Threading
 open System.Threading.Tasks
 open NuGet.Common
 open NuGet.Configuration
+open NuGet.Credentials
 open NuGet.Protocol
 open NuGet.Protocol.Core.Types
 open NuGet.Versioning
@@ -24,16 +25,45 @@ module PackageProcessor =
     let private cache = new SourceCacheContext()
     let private frameworkReducer = FrameworkReducer()
 
+    /// Returns the credentials configured for a package source (packageSourceCredentials in NuGet.Config).
+    /// Without a wired ICredentialService, HttpSourceAuthenticationHandler short-circuits on 401 and never
+    /// retries with the credentials already attached to the PackageSource, so authenticated feeds always fail.
+    type private SettingsCredentialProvider(sources: PackageSource list) =
+        let credsByUri =
+            sources
+            |> List.choose (fun s ->
+                if isNull s.Credentials || not (s.Credentials.IsValid()) then None
+                else Some (s.SourceUri, s.Credentials.ToICredentials()))
+            |> dict
+
+        interface ICredentialProvider with
+            member _.Id = "NuGex.SettingsCredentialProvider"
+            member _.GetAsync(uri: Uri, _proxy, _type, _message, _isRetry, _nonInteractive, _ct) =
+                match credsByUri.TryGetValue uri with
+                | true, creds -> Task.FromResult(CredentialResponse(creds))
+                | _ -> Task.FromResult(CredentialResponse(CredentialStatus.ProviderNotApplicable))
+
     let private repositories =
         let sources =
             Settings.LoadDefaultSettings(Environment.CurrentDirectory)
             |> PackageSourceProvider
             |> fun p -> p.LoadPackageSources() |> Seq.toList
+
+        let enabledSources = sources |> List.filter (fun s -> s.IsEnabled)
+
+        // Wire the settings-backed credentials into the HTTP layer so authenticated feeds work.
+        let providers =
+            AsyncLazy<IEnumerable<ICredentialProvider>>(fun () ->
+                Task.FromResult([ SettingsCredentialProvider(enabledSources) :> ICredentialProvider ] :> IEnumerable<ICredentialProvider>))
+        HttpHandlerResourceV3.CredentialService <-
+            Lazy<ICredentialService>(fun () ->
+                CredentialService(providers, nonInteractive = true, handlesDefaultCredentials = false) :> ICredentialService)
+
         // Fallback if no sources are configured: default to nuget.org so existing behavior never regresses.
-        if List.isEmpty sources then
+        if List.isEmpty enabledSources then
             [| Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json") |]
         else
-            sources
+            enabledSources
             |> List.map (fun s -> Repository.Factory.GetCoreV3(s.Source))
             |> List.toArray
 
@@ -88,13 +118,17 @@ module PackageProcessor =
                         Directory.CreateDirectory(tempFolder) |> ignore
 
                     let nupkgPath = Path.Combine(tempFolder, $"{packageName}.{v}.nupkg")
-                    if not (File.Exists(nupkgPath)) then
+                    if not (File.Exists(nupkgPath)) || (FileInfo(nupkgPath).Length = 0L) then
                         let! downloadResource = repository.GetResourceAsync<FindPackageByIdResource>()
                         use fs = new FileStream(nupkgPath, FileMode.Create)
-                        let! _ = downloadResource.CopyNupkgToStreamAsync(packageName, v, fs, cache, logger, CancellationToken.None)
-                        ()
-
-                    return Some (nupkgPath, tempFolder)
+                        let! copied = downloadResource.CopyNupkgToStreamAsync(packageName, v, fs, cache, logger, CancellationToken.None)
+                        if not copied then
+                            File.Delete(nupkgPath)
+                            return! downloadPackageFrom packageName version (index + 1)
+                        else
+                            return Some (nupkgPath, tempFolder)
+                    else
+                        return Some (nupkgPath, tempFolder)
             with _ -> return! downloadPackageFrom packageName version (index + 1)
     }
 

@@ -4,25 +4,8 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
-        <SelfContained>true</SelfContained>
-        <PublishTrimmed>true</PublishTrimmed>
         <InvariantGlobalization>true</InvariantGlobalization>
-        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-        <DebugType>none</DebugType>
-        <!-- The ModelContextProtocol SDK builds tool-parameter JSON schemas at runtime via
-             reflection (our tool methods return untyped obj/obj[], so there's no source-generated
-             contract for System.Text.Json to use instead). Trimming disables that reflection
-             fallback by default, which crashes server startup with a NotSupportedException for
-             System.Object[]. This feature switch keeps the fallback available. -->
-        <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     </PropertyGroup>
-
-    <ItemGroup>
-        <!-- MSBuildWorkspace discovers these via MEF at runtime (scanning the output folder),
-             not through any direct call site, so the trimmer can't see they're used and would
-             otherwise silently delete them - breaking search_solution for C# projects. -->
-        <TrimmerRootDescriptor Include="roots.xml" />
-    </ItemGroup>
 
     <ItemGroup>
         <Compile Include="Models.fs" />
@@ -46,6 +29,7 @@
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
       <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
       <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+      <PackageReference Include="NuGet.Credentials" Version="7.3.0" />
       <PackageReference Include="NuGet.Packaging" Version="7.3.0" />
       <PackageReference Include="NuGet.Protocol" Version="7.3.0" />
       <PackageReference Include="NuGet.Frameworks" Version="7.3.0" ExcludeAssets="runtime" PrivateAssets="all" />

@@ -21,7 +21,7 @@
 
           # Binary name
           pname = "nugex";
-          version = "0.2.0";
+          version = "0.2.1";
         in
         {
           packages.default = pkgs.buildDotnetModule {
@@ -38,13 +38,6 @@
             # Use host RID for build if we want it to run on the host
             # Or linux-x64 for standard glibc distribution
             runtimeId = "linux-x64";
-            selfContained = true;
-
-            # Trimming, satellite-resource stripping, and debug-symbol removal are configured
-            # in NuGex.fsproj (they're properties of what the app is, not how nix packages it).
-            # PublishSingleFile is intentionally omitted: it bundles Roslyn's out-of-process
-            # BuildHost DLL into the single-file blob, breaking MSBuildWorkspace (search_solution)
-            # entirely.
 
             # Post-install logic to ensure the binary is named correctly and executable
             postInstall = ''

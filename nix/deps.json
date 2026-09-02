@@ -300,6 +300,11 @@
     "hash": "sha256-PG6HnsHFwWPN7EhcjEHGvVz5Hyl6oIfjKucOHvo9ydA="
   },
   {
+    "pname": "NuGet.Credentials",
+    "version": "7.3.0",
+    "hash": "sha256-jPiTuPwaycQfycTxpU5Tkfqf7ib7CNHu+Q+wxIU3bN8="
+  },
+  {
     "pname": "NuGet.Frameworks",
     "version": "7.3.0",
     "hash": "sha256-soqhY2ri12BYrLanW9CmHIthptCJCeBgypj0ixUrTw8="

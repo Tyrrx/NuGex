@@ -1,9 +1,4 @@
-### Requirement: Flake builds via flake-parts
-The repository's `flake.nix` SHALL use `flake-parts` to structure its per-system outputs. The flake SHALL NOT depend on `flake-utils`.
-
-#### Scenario: flake-parts is the only multi-system framework input
-- **WHEN** `flake.nix` inputs are inspected
-- **THEN** `flake-parts` is present as an input and `flake-utils` (aliased `utils`) is absent
+## MODIFIED Requirements
 
 ### Requirement: Default package builds successfully
 The flake SHALL expose a `packages.<system>.default` output that builds the NuGex binary via `buildDotnetModule`, for at least `x86_64-linux`. The build SHALL be **framework-dependent** (not self-contained) and **untrimmed** (`PublishTrimmed` must not be set in the build/publish path).
@@ -31,14 +26,7 @@ The built `nugex` binary SHALL run `search-package` (and `search_solution` via M
 - **WHEN** the Nix-built `nugex` binary runs with `--mcp` and receives `initialize` + `tools/list`
 - **THEN** the server starts without reflection errors and returns all three tools (`search_package`, `search_solution`, `get_package_readme`)
 
-### Requirement: Dev shell remains available
-The flake SHALL expose a `devShells.<system>.default` output providing the .NET 10 SDK, `fsautocomplete`, and `fantomas`.
-
-#### Scenario: Entering the dev shell succeeds
-- **WHEN** `nix develop` is run on a supported system
-- **THEN** the shell activates without error and `dotnet`, `fsautocomplete`, and `fantomas` are available on `PATH`
-
-### Requirement: Published output preserves the MSBuildWorkspace BuildHost
+### Requirement: BuildHost output is preserved
 The default package build SHALL NOT set `PublishSingleFile` to `true`, so that `Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.dll` and its dependencies remain intact loose files under `BuildHost-netcore/` (and `BuildHost-net472/`) alongside the built binary.
 
 #### Scenario: BuildHost DLL is present after build

@@ -1,0 +1,46 @@
+name: release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Pack tool
+        run: |
+          dotnet pack NuGex/NuGex.fsproj -c Release --no-restore \
+            -o ./artifacts \
+            -p:PackAsTool=true \
+            -p:SelfContained=false \
+            -p:PublishTrimmed=false \
+            -p:RuntimeIdentifiers="" \
+            -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Publish to nuget.org
+        run: |
+          dotnet nuget push ./artifacts/*.nupkg \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --skip-duplicate
