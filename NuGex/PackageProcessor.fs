@@ -6,6 +6,7 @@ open System.Linq
 open System.Threading
 open System.Threading.Tasks
 open NuGet.Common
+open NuGet.Configuration
 open NuGet.Protocol
 open NuGet.Protocol.Core.Types
 open NuGet.Versioning
@@ -21,8 +22,20 @@ module PackageProcessor =
 
     let private logger = NullLogger.Instance
     let private cache = new SourceCacheContext()
-    let private repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json")
     let private frameworkReducer = FrameworkReducer()
+
+    let private repositories =
+        let sources =
+            Settings.LoadDefaultSettings(Environment.CurrentDirectory)
+            |> PackageSourceProvider
+            |> fun p -> p.LoadPackageSources() |> Seq.toList
+        // Fallback if no sources are configured: default to nuget.org so existing behavior never regresses.
+        if List.isEmpty sources then
+            [| Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json") |]
+        else
+            sources
+            |> List.map (fun s -> Repository.Factory.GetCoreV3(s.Source))
+            |> List.toArray
 
     /// The framework NuGex itself targets, used as the reference point for selecting
     /// the "best" lib group from a package that ships multiple target frameworks.
@@ -30,39 +43,63 @@ module PackageProcessor =
         let attr = Assembly.GetEntryAssembly().GetCustomAttribute<TargetFrameworkAttribute>()
         NuGetFramework.ParseFrameworkName(attr.FrameworkName, DefaultFrameworkNameProvider.Instance)
 
-    let private getLatestVersion (packageName: string) = task {
-        let! resource = repository.GetResourceAsync<MetadataResource>()
-        let! versions = resource.GetVersions(packageName, cache, logger, CancellationToken.None)
-        return versions 
-               |> Seq.filter (fun v -> not v.IsPrerelease)
-               |> Seq.sortDescending
-               |> Seq.tryHead
+    let rec private getLatestVersionFrom (packageName: string) (index: int) = task {
+        if index >= repositories.Length then
+            return None
+        else
+            let repository = repositories.[index]
+            try
+                let! resource = repository.GetResourceAsync<MetadataResource>()
+                let! versions = resource.GetVersions(packageName, cache, logger, CancellationToken.None)
+                let best =
+                    versions
+                    |> Seq.filter (fun v -> not v.IsPrerelease)
+                    |> Seq.sortDescending
+                    |> Seq.tryHead
+                match best with
+                | Some _ -> return best
+                | None -> return! getLatestVersionFrom packageName (index + 1)
+            with _ -> return! getLatestVersionFrom packageName (index + 1)
     }
 
-    let private downloadPackage (packageName: string) (version: string option) = task {
+    let private getLatestVersion (packageName: string) = task {
+        return! getLatestVersionFrom packageName 0
+    }
+
+    let rec private downloadPackageFrom (packageName: string) (version: string option) (index: int) = task {
         if not (PackageIdValidator.IsValidPackageId(packageName)) then
             invalidArg (nameof packageName) $"'{packageName}' is not a valid NuGet package ID."
 
-        let! nugetVersion =
-            match version with
-            | Some v -> Task.FromResult(Some (NuGetVersion.Parse(v)))
-            | None -> getLatestVersion packageName
+        if index >= repositories.Length then
+            return None
+        else
+            let repository = repositories.[index]
+            try
+                let! nugetVersion =
+                    match version with
+                    | Some v -> Task.FromResult(Some (NuGetVersion.Parse(v)))
+                    | None -> getLatestVersion packageName
 
-        match nugetVersion with
-        | None -> return None
-        | Some v ->
-            let tempFolder = Path.Combine(Path.GetTempPath(), "NuGex", $"{packageName}.{v}")
-            if not (Directory.Exists(tempFolder)) then
-                Directory.CreateDirectory(tempFolder) |> ignore
+                match nugetVersion with
+                | None -> return! downloadPackageFrom packageName version (index + 1)
+                | Some v ->
+                    let tempFolder = Path.Combine(Path.GetTempPath(), "NuGex", $"{packageName}.{v}")
+                    if not (Directory.Exists(tempFolder)) then
+                        Directory.CreateDirectory(tempFolder) |> ignore
 
-            let nupkgPath = Path.Combine(tempFolder, $"{packageName}.{v}.nupkg")
-            if not (File.Exists(nupkgPath)) then
-                let! downloadResource = repository.GetResourceAsync<FindPackageByIdResource>()
-                use fs = new FileStream(nupkgPath, FileMode.Create)
-                let! _ = downloadResource.CopyNupkgToStreamAsync(packageName, v, fs, cache, logger, CancellationToken.None)
-                ()
-            
-            return Some (nupkgPath, tempFolder)
+                    let nupkgPath = Path.Combine(tempFolder, $"{packageName}.{v}.nupkg")
+                    if not (File.Exists(nupkgPath)) then
+                        let! downloadResource = repository.GetResourceAsync<FindPackageByIdResource>()
+                        use fs = new FileStream(nupkgPath, FileMode.Create)
+                        let! _ = downloadResource.CopyNupkgToStreamAsync(packageName, v, fs, cache, logger, CancellationToken.None)
+                        ()
+
+                    return Some (nupkgPath, tempFolder)
+            with _ -> return! downloadPackageFrom packageName version (index + 1)
+    }
+
+    let private downloadPackage (packageName: string) (version: string option) = task {
+        return! downloadPackageFrom packageName version 0
     }
 
     let processPackage (packageName: string) (version: string option) = task {

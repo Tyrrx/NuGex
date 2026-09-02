@@ -1,10 +1,10 @@
 # NuGex
 
-NuGex is a high-performance .NET analysis tool and [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server. It enables Large Language Models (LLMs) to understand the API surface area of local .NET solutions and NuGet packages without needing pre-existing documentation.
+NuGex is a .NET NuGet analysis tool and [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server. It enables Large Language Models (LLMs) to understand the API surface area of local .NET solutions and NuGet packages without needing pre-existing documentation.
 
 By extracting types, members, and XML documentation and exposing them via a fuzzy search index, NuGex allows agents to "explore" a library's capabilities on-demand.
 
-## 🚀 Features
+## Features
 
 - **Solution Analysis**: Recursively extracts the public API (Types, Methods, Properties) from local `.sln` and `.fsproj`/`.csproj` files.
 - **NuGet Integration**: Automatically downloads NuGet packages, extracts DLLs, and parses accompanying XML documentation.
@@ -13,7 +13,7 @@ By extracting types, members, and XML documentation and exposing them via a fuzz
 - **Zero Dependencies**: Can be built as a standalone `musl`-linked binary for Linux.
 - **In-Memory Caching**: Maintains indices in memory for sub-second search performance across multiple requests.
 
-## 📦 Installation
+## Installation
 
 ### Nix (Recommended)
 
@@ -51,7 +51,7 @@ If you have the .NET 10 SDK installed:
 dotnet run --project NuGex/NuGex.fsproj -- --mcp
 ```
 
-## 🛠 Usage
+## Usage
 
 ### 1. Configure as an MCP Server
 
@@ -72,7 +72,7 @@ Run NuGex without flags to see it in action analyzing a sample package:
 ./NuGex
 ```
 
-## 🏗 Development
+## Development
 
 - **Build**: `dotnet build`
 - **Clean**: `dotnet clean`
@@ -80,6 +80,6 @@ Run NuGex without flags to see it in action analyzing a sample package:
 
 NuGex is written in **F#** and leverages **Roslyn** (Microsoft.CodeAnalysis) for deep assembly and source code inspection.
 
-## 📄 License
+## License
 
 MIT
